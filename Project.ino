@@ -1,6 +1,6 @@
+#include <EEPROM.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
-#include <EEPROM.h>
 #include <RTClib.h>
 
 class Button {
@@ -32,7 +32,8 @@ class Button {
 
 //--------------------------------------------------------------------------
 
-// constants won't change. They're used here to set pin numbers:
+// Constants won't be changed. 
+// They're used here to set pin numbers:
 
 Button button_1(4);
 Button button_2(7);
@@ -57,9 +58,9 @@ double speedKm;
 unsigned long currenTime = 0;
 double timeOfRotation = 0;
 
-double wheelSize;    // mm
-int personAge;    // years
-int personWeight; // kg
+double wheelSize;    // Mm
+int personAge;    // Years
+int personWeight; // Kg
 
 int stage;
 int mode;
@@ -87,75 +88,73 @@ int currentAverage = 0;
 int maxSpeed;
 
 void rpm_fun() {
-rpmcount++;
+  rpmcount++;
 }
 
 //--------------------------------------------------------------------------
 
 void setup() {
- 
+  button_1.begin();
+  button_2.begin();
+  button_3.begin();
+  button_4.begin();
+
+  Serial.begin(9600);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_fun, RISING);
   
-   button_1.begin();
-   button_2.begin();
-   button_3.begin();
-   button_4.begin();
-  
-   Serial.begin(9600);
-   attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_fun, RISING);
-   
-   stage = 1;
-   mode = 1;
-   bContinue = false;
+  stage = 1;
+  mode = 1;
+  bContinue = false;
   // lastButtonPressed = ' ';
 
   maxSpeed = 0;
 
-   //initialize the lcd
-   lcd.init();
-   displayRefreshTime = 1000; // 0.01 sec                       
- 
-   // Print a message to the LCD.
-   lcd.backlight();
-   lcd.setCursor(0,0);
-   lcd.print("Bike computer");
-   lcd.setCursor(0,1);
-   lcd.print("Speedo !!!");
+  //initialize the lcd
+  lcd.init();
+  displayRefreshTime = 1000; // 0.01 sec                       
 
- 
+  // Print a message to the LCD.
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Bike computer");
+  lcd.setCursor(0,1);
+  lcd.print("Speedo !!!");
 
-   // Store those values on the EEPROM so when the power is cut off they don't get lost
-   if(EEPROM.read(0 != 2155)){ 
+
+
+  // Store those values on the EEPROM so when the power is cut off they don't get lost
+  if(EEPROM.read(0 != 2155)){ 
     wheelSize = EEPROM.get(0, wheelSize);
-   } else {
+  } else {
     wheelSize = 2155;
     EEPROM.put(0, wheelSize);
-   }
+  }
 
-   if(EEPROM.read(10 != 35)){ 
-    personAge = EEPROM.get(10, personAge);
-   } else {
+  if(EEPROM.read(10 != 35)){ 
+   personAge = EEPROM.get(10, personAge);
+  } else {
     personAge = 35;
     EEPROM.put(10, personAge);
-   }
-   
-   if(EEPROM.read(20 != 70)){ 
+  }
+  
+  if(EEPROM.read(20 != 70)){ 
     personWeight = EEPROM.get(20, personWeight);
-   } else {
+  } else {
     personWeight = 70;
     EEPROM.put(20, personWeight);
-   }
+  }
 
-   rpmcount = 0;
-   rpm = 0;
-   timeold = 0;
+  rpmcount = 0;
+  rpm = 0;
+  timeold = 0;
 
-   //circumference = wheelSize * 0.001; // meters
-   speedKm = 0; // km/h
-   totalDistance = 0; //kilometers
+ //circumference = wheelSize * 0.001; meters
+  speedKm = 0; // km/h
+  totalDistance = 0; //kilometers
 
-    if (! rtc.begin()) {
+  if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
-    while (1);
+  while (1);
   }
 
   if (rtc.lostPower()) {
@@ -163,14 +162,12 @@ void setup() {
 
     // Following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  
+
     // Following line sets the RTC with an explicit date & time
     // for example to set January 27 2017 at 12:56 you would call:
     // rtc.adjust(DateTime(2021, 4, 9, 21, 25, 30));
   }
-  circumference = wheelSize * 0.001;
-
-  
+  circumference = wheelSize * 0.001;  
 }
 
 //--------------------------------------------------------------------------
@@ -203,16 +200,14 @@ void calculateSpeed(){
     
     //rpm=(60000)/(currenTime-timeold);// Revolution Per Minute
 
-    timeOfRotation = (currenTime-timeold) * 0.001; // seconds
-    speedKm = (circumference/ timeOfRotation) * 3.6; // km/h
+    timeOfRotation = (currenTime-timeold) * 0.001; // Seconds
+    speedKm = (circumference/ timeOfRotation) * 3.6; // Km/h
 
-    totalDistance += circumference * 0.001; // km
+    totalDistance += circumference * 0.001; // Km
     timeold = currenTime;
     rpmcount = 0;
 
     if(!paused && runR){
-
-     
       arrayMaximumKPH[arrIndex] = speedKm;
       arrIndex++;
 
@@ -229,16 +224,16 @@ void changeVariables(char symbol){
   switch(symbol){
     case '-':
       switch(stage){
-        case 1: // wheel size 
+        case 1: // Wheel size 
           wheelSize -= 5;
           circumference = wheelSize * 0.001;
           personalData(stage);
           break;
-        case 2: // person age
+        case 2: // Person age
           personAge--;
           personalData(stage);
           break;
-        case 3: // person age
+        case 3: // Person age
           personWeight--;
           personalData(stage);
           break;     
@@ -246,16 +241,16 @@ void changeVariables(char symbol){
     break;
     case '+':
       switch(stage){
-        case 1: // wheel size 
+        case 1: // Wheel size 
           wheelSize += 5;
           circumference = wheelSize * 0.001;
           personalData(stage);
           break;
-        case 2: // person age
+        case 2: // Person age
           personAge++;
           personalData(stage);
           break;
-        case 3: // person age
+        case 3: // Person age
           personWeight++;
           personalData(stage);
           break;     
@@ -269,21 +264,21 @@ void changeVariables(char symbol){
 void personalData(int stage) {
   lcd.clear();
   switch(stage) {
-    case 1: // wheel size 
+    case 1: // Wheel size 
       lcd.setCursor(0,0);
       lcd.print("Wheel size (mm)");
       lcd.setCursor(0,1);
       lcd.print(wheelSize, 0);
       EEPROM.put(0, wheelSize);
       break;
-    case 2: // person age
+    case 2: // Person age
       lcd.setCursor(0,0);
       lcd.print("Enter age");
       lcd.setCursor(0,1);
       lcd.print(personAge);
       EEPROM.put(10, personAge);
       break;  
-    case 3: // person weight
+    case 3: // Person weight
       lcd.setCursor(0,0);
       lcd.print("Enter weight");
       lcd.setCursor(0,1);
@@ -318,16 +313,16 @@ void DisplayOutput(){
   if(button_2.isReleased()){
     runR = !runR;
 
-      paused = false;
-      once = true;
-      
-      previous = 0;
-      start = 0;
-      timer = 0;
-      speedKm = 0;
-      lastAverage = 0;
-      maxSpeed = 0;
-      totalDistance = 0;
+    paused = false;
+    once = true;
+    
+    previous = 0;
+    start = 0;
+    timer = 0;
+    speedKm = 0;
+    lastAverage = 0;
+    maxSpeed = 0;
+    totalDistance = 0;
   }
   if(runR){
     if(!paused){
@@ -345,7 +340,7 @@ void DisplayOutput(){
       paused = !paused;
       once = true;
     }
-    // button 3 could be removed
+    // Button 3 could be removed
     if(button_3.isReleased()){
       mode++;
       if(mode == 3){
@@ -366,17 +361,17 @@ void DisplayOutput(){
 void normalMode(int stage) {
   lcd.clear();
   switch(stage) {
-    case 1: // speed & distance
+    case 1: // Speed & distance
       lcd.setCursor(0,0);
       lcd.print("Speed ");
       lcd.setCursor(6,0);
-      lcd.print(speedKm, 0);              // km/h
+      lcd.print(speedKm, 0);  // Km/h
       lcd.setCursor(12,0);
       lcd.print("km/h");
       lcd.setCursor(0,1);
       lcd.print("distance");
       lcd.setCursor(9,1);
-      lcd.print(totalDistance);              //distance travelled
+      lcd.print(totalDistance);   // Distance travelled
       lcd.setCursor(14,1);
       lcd.print("km");
       break;
@@ -408,7 +403,7 @@ void normalMode(int stage) {
 void sportMode(int stage) {
   lcd.clear();
   switch(stage) {
-    case 1: // speed, distance & time of the run
+    case 1: // Speed, distance & time of the run
       lcd.setCursor(0,0);
       lcd.print("S ");
       lcd.setCursor(3,0);
@@ -424,17 +419,17 @@ void sportMode(int stage) {
       lcd.setCursor(14,1);
       lcd.print("km");
       break;
-    case 2: // top & average speed
+    case 2: // Top & average speed
       lcd.setCursor(0,0);
       lcd.print("TOP ");
       lcd.setCursor(5,0);
-      lcd.print(maxSpeed);              // top speed (km/h)
+      lcd.print(maxSpeed);              // Top speed (km/h)
       lcd.setCursor(12,0);
       lcd.print("km/h");
       lcd.setCursor(0,1);
       lcd.print("AVG ");
       lcd.setCursor(5,1);
-      lcd.print(lastAverage);           // aveage speed (km/h)
+      lcd.print(lastAverage);           // Average speed (km/h)
       lcd.setCursor(12,1);
       lcd.print("km/h");
       break;
@@ -465,7 +460,7 @@ void calculateAverageSpeed() {
 String timeToString(long timeNow) {
   
   unsigned long allSeconds = timeNow / 1000;
-  int runHours = allSeconds/3600;
+  int runHours = allSeconds / 3600;
   int secsRemaining = allSeconds % 3600;
   int runMinutes = secsRemaining / 60;
   int runSeconds = secsRemaining % 60;
