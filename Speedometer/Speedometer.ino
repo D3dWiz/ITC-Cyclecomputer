@@ -2,36 +2,10 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+unsigned long displayRefreshTime;
 #include <RTClib.h>
-
-class Button {
-  private:
-    bool _state;
-    uint8_t _pin;
-
-  public:
-    Button(uint8_t pin) : _pin(pin) {}
-
-    void begin() {
-      pinMode(_pin, INPUT_PULLUP);
-      _state = digitalRead(_pin);
-    }
-
-    bool isReleased() {
-      bool v = digitalRead(_pin);
-      if (v != _state) {
-        delay(50);
-        _state = v;
-        if (_state) {
-          delay(50);
-          return true;
-        }
-      }
-      return false;
-    }
-};
-
-//--------------------------------------------------------------------------
+#include "Button.h"
 
 // Constants won't be changed.
 // They're used here to set pin numbers:
@@ -67,9 +41,6 @@ int stage;
 int mode;
 int lastButtonPressed;
 bool bContinue;
-
-LiquidCrystal_I2C lcd(0x27, 20, 4);
-unsigned long displayRefreshTime;
 
 RTC_DS3231 rtc;
 
