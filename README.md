@@ -18,6 +18,7 @@ External Libraries:
 
 ## Used parts
 - Arduino Uno Rev3 (Microcontroller Board)
+- Breadboard
 - LCD-16x2
 - RTC (DS3231)
 - Generic IC (LCM 1702)
