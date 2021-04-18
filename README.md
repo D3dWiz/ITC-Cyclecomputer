@@ -2,7 +2,7 @@
 
 The ITC Cyclecomputer is a cyclecomputer for bikes that is made in Arduino
 ## Videos
-https://www.youtube.com/watch?v=Dy3WI1eWqNY
+https://www.youtube.com/watch?v=Dy3WI1eWqNY/
 https://www.youtube.com/watch?v=0SFL4qDW1gs
 ## Contributors
 - Stamen Vladimirov
