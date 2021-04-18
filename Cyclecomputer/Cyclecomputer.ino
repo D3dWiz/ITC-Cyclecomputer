@@ -13,12 +13,6 @@ unsigned long displayRefreshTime;
 Button button_1(4);
 Button button_2(7);
 Button button_3(8);
-Button button_4(12);
-
-bool button1_Pressed = false;
-bool button2_Pressed = false;
-bool button3_Pressed = false;
-bool button4_Pressed = false;
 
 const byte interruptPin = 2;
 
@@ -69,7 +63,6 @@ void setup() {
   button_1.begin();
   button_2.begin();
   button_3.begin();
-  button_4.begin();
 
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_fun, RISING);
@@ -94,7 +87,7 @@ void setup() {
 
 
 
-  // Store those values on the EEPROM so when the power is cut off they don't get lost
+  // Store those values on the EEPROM so when the power is cut off they don't get lost.
   if (EEPROM.read(0 != 2155)) {
     wheelSize = EEPROM.get(0, wheelSize);
   } else {
