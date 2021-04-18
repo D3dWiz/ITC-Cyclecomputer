@@ -1,6 +1,10 @@
-# ITC Speedometer
+# ITC Cyclecomputer
 
-The ITC Speedometer is a speedometer for bikes which is made in Arduino
+The ITC Cyclecomputer is a cyclecomputer for bikes that is made in Arduino
+## Contributors
+- Stamen Vladimirov
+- Denis Kolev
+- Diyan Genov
 
 ## Used libraries
 Standart Libraries:
@@ -13,6 +17,20 @@ External Libraries:
 - [Wire](https://www.arduino.cc/en/Reference/Wire)
 
 ## Used parts
+- Arduino Uno Rev3 (Microcontroller Board)
+- Breadboard
+- LCD-16x2
+- RTC (DS3231)
+- Generic IC (LCM 1702)
+- Sensor KY-003
+- Potentiometer
+- DC Motor
+- 9V Battery
+- Diodes
+- Bipolar transistors
+- Push buttons
+- Basic resistors
+- Wires
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
