@@ -22,6 +22,11 @@ External Libraries:
 - RTC (DS3231)
 - Generic IC (LCM 1702)
 - Sensor KY-003
+- Potentiometer
+- DC Motor
+- 9V Battery
+- Diodes
+- Bipolar transistors
 - Push buttons
 - Basic resistors
 - Wires
