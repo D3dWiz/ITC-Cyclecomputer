@@ -1,0 +1,9 @@
+1x ARDUINO UNO
+1x ЧАСОВНИК С КАЛЕНДАР - DS3231
+1x ДАТЧИК НА ХОЛ
+1x ПОТЕНЦИОМЕТЪР B10K MONO
+3x МИКРОБУТОН H=5
+4x 1 КИЛООМ РЕЗИСТОР
+1x ДИОД 1N4001 
+1x ТРАНЗИСТОР TIP110 (NPN)
+1x I2C 16x2 Arduino LCD Display Module

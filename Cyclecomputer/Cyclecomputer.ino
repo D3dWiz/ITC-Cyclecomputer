@@ -1,14 +1,9 @@
 #include <Arduino.h>
-#include <EEPROM.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x27, 20, 4);
-unsigned long displayRefreshTime;
-#include <RTClib.h>
 #include "Button.h"
-
-// Constants won't be changed.
-// They're used here to set pin numbers:
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+#include <RTClib.h>
 
 Button button_1(4);
 Button button_2(7);
@@ -21,22 +16,20 @@ unsigned int rpm;
 unsigned long timeold;
 
 double circumference;
-double totalDistance;
+double distance;
 double speedKm;
 
 unsigned long currenTime = 0;
 double timeOfRotation = 0;
 
-double wheelSize;    // Mm
-int personAge;    // Years
-int personWeight; // Kg
-
-int stage;
-int mode;
-int lastButtonPressed;
-bool bContinue;
+double wheelSize; // mm
+int personAge; // years
+int personWeight; // kg
 
 RTC_DS3231 rtc;
+LiquidCrystal_I2C lcd(0x27,20,4);
+int mode;
+unsigned long displayRefreshTime;
 
 bool runR = false;
 bool paused = false;
@@ -47,14 +40,14 @@ long previous = 0;
 bool once = true;
 
 int arrIndex = 0;
-int arrayMaximumKPH[100];
+int arrayAverageKmh[100];
 int lastAverage = 0;
 int currentAverage = 0;
 
 int maxSpeed;
 
 void rpm_fun() {
-  rpmcount++;
+rpmcount++;
 }
 
 //--------------------------------------------------------------------------
@@ -63,76 +56,52 @@ void setup() {
   button_1.begin();
   button_2.begin();
   button_3.begin();
-
+  
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_fun, RISING);
-
-  stage = 1;
+  
   mode = 1;
-  bContinue = false;
-  // lastButtonPressed = ' ';
-
   maxSpeed = 0;
-
-  //initialize the lcd
+  
+  // Initialize the lcd
   lcd.init();
-  displayRefreshTime = 1000; // 0.01 sec
-
-  // Print a message to the LCD.
+  displayRefreshTime = 1000; // 1 sec                       
+  
+  // Print a starting message to the LCD.
   lcd.backlight();
-  lcd.setCursor(0, 0);
+  lcd.setCursor(0,0);
   lcd.print("Bike computer");
-  lcd.setCursor(0, 1);
-  lcd.print("Speedo !!!");
-
-
-
-  // Store those values on the EEPROM so when the power is cut off they don't get lost.
-  if (EEPROM.read(0 != 2155)) {
-    wheelSize = EEPROM.get(0, wheelSize);
-  } else {
-    wheelSize = 2155;
-    EEPROM.put(0, wheelSize);
-  }
-
-  if (EEPROM.read(10 != 35)) {
-    personAge = EEPROM.get(10, personAge);
-  } else {
-    personAge = 35;
-    EEPROM.put(10, personAge);
-  }
-
-  if (EEPROM.read(20 != 70)) {
-    personWeight = EEPROM.get(20, personWeight);
-  } else {
-    personWeight = 70;
-    EEPROM.put(20, personWeight);
-  }
-
+  lcd.setCursor(0,1);
+  lcd.print("Speedometer");
+  
+  // Store the personal data values on the EEPROM so when the power is cut off they don't get lost
+  wheelSize = EEPROM.get(0, wheelSize);
+  personAge = EEPROM.get(10, personAge);
+  personWeight = EEPROM.get(20, personWeight);
+  
   rpmcount = 0;
   rpm = 0;
   timeold = 0;
-
-  //circumference = wheelSize * 0.001; meters
+  
+  circumference = wheelSize * 0.001; // meters
   speedKm = 0; // km/h
-  totalDistance = 0; //kilometers
-
+  distance = 0; //kilometers
+  
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-
+  
   if (rtc.lostPower()) {
     Serial.println("RTC lost power, lets set the time!");
-
+    
     // Following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
+    
     // Following line sets the RTC with an explicit date & time
-    // for example to set January 27 2017 at 12:56 you would call:
-    // rtc.adjust(DateTime(2021, 4, 9, 21, 25, 30));
+    // for example to set April 9 2021 at 12:56 you would call:
+    // rtc.adjust(DateTime(2021, 4, 9, 12, 56, 00));
   }
-  circumference = wheelSize * 0.001;
 }
 
 //--------------------------------------------------------------------------
@@ -140,220 +109,248 @@ void setup() {
 void loop() {
   calculateSpeed();
   calculateAverageSpeed();
-  if (millis() > 3000) {
-    if ((millis() - displayRefreshTime) >= 1000) {
+  if(millis() == 3000){
+    normalMode(mode);
+    dataNormalMode(mode);
+  }
+  if(millis() > 3000){
+    if((millis() - displayRefreshTime) >= 1000){
       displayRefreshTime += 1000;
-      if (runR) {
-        sportMode(mode);
+      if(runR){
+        dataSportMode(mode);
       }
-      if (!runR) {
-        normalMode(mode);
+      else {
+        dataNormalMode(mode);
       }
-    }
+    } 
     DisplayOutput();
   }
 }
 
 //--------------------------------------------------------------------------
 
-void calculateSpeed() {
+void calculateSpeed(){ // calculate current speed & travelled distance
   currenTime = millis();
-  if (currenTime - timeold >= 5000) {
+  if(currenTime-timeold >= 5000){
     speedKm = 0;
   }
-  if (rpmcount >= 1) {
+  if(rpmcount>=1) {
+    timeOfRotation = (currenTime-timeold) * 0.001; // seconds
+    speedKm = (circumference/ timeOfRotation) * 3.6; // km/h
 
-    //rpm=(60000)/(currenTime-timeold);// Revolution Per Minute
-
-    timeOfRotation = (currenTime - timeold) * 0.001; // Seconds
-    speedKm = (circumference / timeOfRotation) * 3.6; // Km/h
-
-    totalDistance += circumference * 0.001; // Km
+    distance += circumference * 0.001; // km
     timeold = currenTime;
     rpmcount = 0;
 
-    if (!paused && runR) {
-      arrayMaximumKPH[arrIndex] = speedKm;
+    if(!paused && runR){
+      arrayAverageKmh[arrIndex] = speedKm;
       arrIndex++;
 
-      if (maxSpeed < speedKm) {
+      if(maxSpeed < speedKm){
         maxSpeed = speedKm;
-      }
+      }  
     }
   }
 }
 
 //--------------------------------------------------------------------------
 
-void changeVariables(char symbol) {
-  switch (symbol) {
+void changeVariables(char symbol){ // update & display the personal data
+  switch(symbol){
     case '-':
-      switch (stage) {
-        case 1: // Wheel size
+      switch(mode){
+        case 1: // wheel size 
           wheelSize -= 5;
+          EEPROM.put(0, wheelSize);
           circumference = wheelSize * 0.001;
-          personalData(stage);
+          personalData(mode);
           break;
-        case 2: // Person age
+        case 2: // person age
           personAge--;
-          personalData(stage);
+          EEPROM.put(10, personAge);
+          personalData(mode);
           break;
-        case 3: // Person age
+        case 3: // person age
           personWeight--;
-          personalData(stage);
-          break;
-      }
-      break;
+          EEPROM.put(20, personWeight);
+          personalData(mode);
+          break;     
+      } 
+    break;
     case '+':
-      switch (stage) {
-        case 1: // Wheel size
+      switch(mode){
+        case 1: // wheel size 
           wheelSize += 5;
+          EEPROM.put(0, wheelSize);
           circumference = wheelSize * 0.001;
-          personalData(stage);
+          personalData(mode);
           break;
-        case 2: // Person age
+        case 2: // person age
           personAge++;
-          personalData(stage);
+          EEPROM.put(10, personAge);
+          personalData(mode);
           break;
-        case 3: // Person age
+        case 3: // person age
           personWeight++;
-          personalData(stage);
-          break;
-      }
-      break;
+          EEPROM.put(20, personWeight);
+          personalData(mode);
+          break;     
+      } 
+    break;            
   }
 }
 
 //--------------------------------------------------------------------------
 
-void personalData(int stage) {
+void personalData(int stage) { // display the personal data
   lcd.clear();
-  switch (stage) {
-    case 1: // Wheel size
-      lcd.setCursor(0, 0);
+  switch(stage) {
+    case 1: // wheel size 
+      lcd.setCursor(0,0);
       lcd.print("Wheel size (mm)");
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0,1);
       lcd.print(wheelSize, 0);
-      EEPROM.put(0, wheelSize);
       break;
-    case 2: // Person age
-      lcd.setCursor(0, 0);
+    case 2: // person age
+      lcd.setCursor(0,0);
       lcd.print("Enter age");
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0,1);
       lcd.print(personAge);
-      EEPROM.put(10, personAge);
-      break;
-    case 3: // Person weight
-      lcd.setCursor(0, 0);
+      break;  
+    case 3: // person weight
+      lcd.setCursor(0,0);
       lcd.print("Enter weight");
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0,1);
       lcd.print(personWeight);
-      EEPROM.put(20, personWeight);
-      break;
+      break;  
   }
 }
 
 //--------------------------------------------------------------------------
 
-void DisplayOutput() {
-  if (!runR) {
-    if (button_1.isReleased()) {
-      personalData(stage);
-      while (stage <= 3) {
-        if (button_1.isReleased()) {
-          stage++;
-          personalData(stage);
+void DisplayOutput(){
+  if(!runR){
+    if(button_1.isReleased()){ // open the personal data menu
+      mode = 1;
+      personalData(mode);
+      while(mode <= 3){
+        if(button_1.isReleased()){ // go to the next page
+          mode++;
+          personalData(mode);
         }
-        if (button_2.isReleased()) {
+        if(button_2.isReleased()){ // lower the values
           changeVariables('-');
         }
-        if (button_3.isReleased()) {
+        if(button_3.isReleased()){ // higher the values
           changeVariables('+');
         }
       }
-      stage = 1;
+      mode = 1;
+      normalMode(mode);
     }
   }
 
-  if (button_2.isReleased()) {
+  if(button_2.isReleased()){ // start & stop the run
     runR = !runR;
-
+  
     paused = false;
     once = true;
-
+    
     previous = 0;
     start = 0;
     timer = 0;
     speedKm = 0;
     lastAverage = 0;
     maxSpeed = 0;
-    totalDistance = 0;
+    distance = 0;
+    mode = 1;
+  
+    if(runR){ // update the menu
+      sportMode(mode);
+      dataSportMode(mode);
+    }
+    else{
+      normalMode(mode);
+      dataNormalMode(mode);
+    }
   }
-  if (runR) {
-    if (!paused) {
-      if (once) {
+  if(runR){
+    if(!paused){
+      if(once){
         start = millis();
         once = false;
       }
       current = millis();
       timer = previous + (current - start);
     }
-    else {
-      previous = timer;
+    else{
+        previous = timer;
     }
-    if (button_1.isReleased()) {
+    if(button_1.isReleased()){ // pause & start the timer of the run
       paused = !paused;
       once = true;
     }
-    // Button 3 could be removed
-    if (button_3.isReleased()) {
-      mode++;
-      if (mode == 3) {
-        mode = 1;
-      }
-    }
   }
-
-  if (button_3.isReleased()) {
+  
+  if(button_3.isReleased()){ // switch between the different modes in the menu
     mode++;
-    if (mode == 3) {
+    if(mode == 3){
       mode = 1;
+    }
+    if(runR){
+      sportMode(mode);
+      dataSportMode(mode);
+    }
+    else{
+      normalMode(mode);
+      dataNormalMode(mode);
     }
   }
 }
 //--------------------------------------------------------------------------
 
-void normalMode(int stage) {
+void normalMode(int stage) { // called once => put the constant string to the display
   lcd.clear();
-  switch (stage) {
-    case 1: // Speed & distance
-      lcd.setCursor(0, 0);
-      lcd.print("Speed ");
-      lcd.setCursor(6, 0);
-      lcd.print(speedKm, 0);  // Km/h
-      lcd.setCursor(12, 0);
-      lcd.print("km/h");
-      lcd.setCursor(0, 1);
-      lcd.print("distance");
-      lcd.setCursor(9, 1);
-      lcd.print(totalDistance);   // Distance travelled
-      lcd.setCursor(14, 1);
-      lcd.print("km");
-      break;
-    case 2: // time & date
-      DateTime now = rtc.now();
+  switch(stage) {
+    case 1:
+    lcd.setCursor(0,0);
+    lcd.print("Speed ");
+    lcd.setCursor(12,0);
+    lcd.print("km/h");
+    lcd.setCursor(0,1);
+    lcd.print("distance");
+    lcd.setCursor(14,1);
+    lcd.print("km");
+    break;
+  case 2: 
+    lcd.setCursor(0,0);
+    lcd.print("Time"); // current time
+    lcd.setCursor(0,1);
+    lcd.print("Date"); // current date
+    break;
+  }  
+}
 
-      lcd.setCursor(0, 0);
-      lcd.print("Time");
-      lcd.setCursor(5, 0);
+//--------------------------------------------------------------------------
+
+void dataNormalMode(int stage) { // update the changing information on the display
+  switch(stage) {
+    case 1: 
+      lcd.setCursor(6,0);
+      lcd.print(speedKm, 0); // current speed (km/h)    
+      lcd.setCursor(9,1);
+      lcd.print(distance); // current distance travelled (km/h)
+      break;
+   case 2: 
+      DateTime now = rtc.now();
+      
+      lcd.setCursor(5,0);
       lcd.print(now.hour(), DEC);
       lcd.print(':');
       lcd.print(now.minute(), DEC);
       lcd.print(':');
       lcd.print(now.second(), DEC);
-      lcd.setCursor(0, 1);
-      lcd.print("Date");
-      lcd.setCursor(5, 1);
+      lcd.setCursor(5,1);
       lcd.print(now.day(), DEC);
       lcd.print('/');
       lcd.print(now.month(), DEC);
@@ -365,53 +362,63 @@ void normalMode(int stage) {
 
 //--------------------------------------------------------------------------
 
-void sportMode(int stage) {
+void sportMode(int stage) { // called once => put the constant string to the display
   lcd.clear();
-  switch (stage) {
-    case 1: // Speed, distance & time of the run
-      lcd.setCursor(0, 0);
-      lcd.print("S ");
-      lcd.setCursor(3, 0);
-      lcd.print(speedKm, 0);
-      lcd.setCursor(6, 0);
+  switch(stage) {
+    case 1: 
+      lcd.setCursor(0,0);
+      lcd.print("S ");           
+      lcd.setCursor(6,0);
       lcd.print("T");
-      lcd.setCursor(8, 0);
-      lcd.print(timeToString(timer));
-      lcd.setCursor(0, 1);
-      lcd.print("Travelled ");
-      lcd.setCursor(10, 1);
-      lcd.print(totalDistance, 1);
-      lcd.setCursor(14, 1);
+      lcd.setCursor(0,1);
+      lcd.print("Travelled ");           
+      lcd.setCursor(14,1);
       lcd.print("km");
       break;
-    case 2: // Top & average speed
-      lcd.setCursor(0, 0);
-      lcd.print("TOP ");
-      lcd.setCursor(5, 0);
-      lcd.print(maxSpeed);              // Top speed (km/h)
-      lcd.setCursor(12, 0);
+    case 2: 
+      lcd.setCursor(0,0);
+      lcd.print("TOP ");             
+      lcd.setCursor(12,0);
       lcd.print("km/h");
-      lcd.setCursor(0, 1);
-      lcd.print("AVG ");
-      lcd.setCursor(5, 1);
-      lcd.print(lastAverage);           // Average speed (km/h)
-      lcd.setCursor(12, 1);
+      lcd.setCursor(0,1);
+      lcd.print("AVG ");         
+      lcd.setCursor(12,1);
       lcd.print("km/h");
-      break;
-
+      break; 
   }
 }
 
 //--------------------------------------------------------------------------
 
-void calculateAverageSpeed() {
-  if (arrIndex == 100) {
-    for (int i = 0; i < arrIndex; i++) {
-      currentAverage += arrayMaximumKPH[i];
+void dataSportMode(int stage) { // update the changing information on the display
+  switch(stage) {
+    case 1: 
+      lcd.setCursor(3,0);
+      lcd.print(speedKm, 0); // current speed (km/h)            
+      lcd.setCursor(8,0);
+      lcd.print(timeToString(timer));  
+      lcd.setCursor(10,1);
+      lcd.print(distance, 1); // current distance travelled (km/h)
+      break;
+    case 2:
+      lcd.setCursor(5,0);
+      lcd.print(maxSpeed); // top speed (km/h)             
+      lcd.setCursor(5,1);
+      lcd.print(lastAverage); // aveage speed (km/h)          
+      break;
+  }
+}
+
+//--------------------------------------------------------------------------
+
+void calculateAverageSpeed() { // calculate average speed in every 100 wheel rotations
+  if(arrIndex == 100){
+    for(int i = 0; i < arrIndex; i++){
+      currentAverage += arrayAverageKmh[i];
     }
     currentAverage /= arrIndex;
     arrIndex = 0;
-    if (lastAverage != 0) {
+    if(lastAverage != 0){
       lastAverage = (lastAverage + currentAverage) / 2;
     }
     else {
@@ -422,17 +429,17 @@ void calculateAverageSpeed() {
 
 //--------------------------------------------------------------------------
 
-String timeToString(long timeNow) {
-
+String timeToString(long timeNow) { // convert millisecond to time (hours-minutes-seconds)
+  
   unsigned long allSeconds = timeNow / 1000;
-  int runHours = allSeconds / 3600;
+  int runHours = allSeconds/3600;
   int secsRemaining = allSeconds % 3600;
   int runMinutes = secsRemaining / 60;
   int runSeconds = secsRemaining % 60;
-
+  
   char result[21];
-  sprintf(result, "%02d:%02d:%02d", runHours, runMinutes, runSeconds);
+  sprintf(result,"%02d:%02d:%02d",runHours,runMinutes,runSeconds);
   String finalResult = result;
-
+  
   return finalResult;
 }
